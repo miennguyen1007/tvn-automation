@@ -1,0 +1,41 @@
+{
+  "name": "tvn-automation",
+  "version": "1.0.0",
+  "description": "Playwright E2E Automation for tvn-sut.info — TypeScript + POM + Allure",
+  "scripts": {
+    "test": "playwright test",
+    "test:smoke": "playwright test --project=smoke:chromium",
+    "test:e2e": "playwright test tests/e2e --project=e2e:chromium",
+    "test:regression": "playwright test tests/regression",
+    "test:all": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "report:playwright": "playwright show-report",
+    "report:allure:generate": "allure generate allure-results -o allure-report --clean",
+    "report:allure:open": "allure open allure-report",
+    "report:allure": "npm run report:allure:generate && npm run report:allure:open",
+    "browsers:install": "playwright install --with-deps",
+    "clean": "rm -rf playwright-report test-results allure-results allure-report"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^9.0.0",
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.0.0",
+    "allure-commandline": "^2.46.1",
+    "allure-playwright": "^3.14.0",
+    "dotenv": "^16.4.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.7.0"
+  },
+  "keywords": [
+    "playwright",
+    "typescript",
+    "automation",
+    "e2e",
+    "pom",
+    "allure"
+  ],
+  "author": "QC Team - TVN-SUT",
+  "license": "MIT"
+}
