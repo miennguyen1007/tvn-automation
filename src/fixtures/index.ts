@@ -1,43 +1,42 @@
-import { test as base, Page, BrowserContext } from '@playwright/test';
+import { test as base, Page } from '@playwright/test';
 import { LoginPage } from '../pages/LoginPage';
+import { RegisterPage } from '../pages/RegisterPage';
 import { HomePage } from '../pages/HomePage';
-import { config } from '../data/config';
+import { ProductListPage } from '../pages/ProductListPage';
+import { ProductDetailPage } from '../pages/ProductDetailPage';
+import { CartPage } from '../pages/CartPage';
 
 /**
- * Custom Fixtures — extend Playwright's base `test` with pre-built page objects
- * and authenticated contexts, so tests stay clean and DRY.
+ * Custom Fixtures — injects all Page Objects into each test automatically.
+ * Tests stay clean and focused on behavior, not page setup.
  */
-export type Fixtures = {
-  loginPage:    LoginPage;
-  homePage:     HomePage;
-  authContext:  BrowserContext;   // Pre-authenticated browser context
+export type AppFixtures = {
+  loginPage:         LoginPage;
+  registerPage:      RegisterPage;
+  homePage:          HomePage;
+  productListPage:   ProductListPage;
+  productDetailPage: ProductDetailPage;
+  cartPage:          CartPage;
 };
 
-export const test = base.extend<Fixtures>({
-  /**
-   * Provides a fresh LoginPage instance for each test
-   */
+export const test = base.extend<AppFixtures>({
   loginPage: async ({ page }, use) => {
     await use(new LoginPage(page));
   },
-
-  /**
-   * Provides a fresh HomePage instance for each test
-   */
+  registerPage: async ({ page }, use) => {
+    await use(new RegisterPage(page));
+  },
   homePage: async ({ page }, use) => {
     await use(new HomePage(page));
   },
-
-  /**
-   * Provides a browser context that is already authenticated.
-   * Uses stored session state from auth.setup.ts
-   */
-  authContext: async ({ browser }, use) => {
-    const context = await browser.newContext({
-      storageState: 'playwright/.auth/user.json',
-    });
-    await use(context);
-    await context.close();
+  productListPage: async ({ page }, use) => {
+    await use(new ProductListPage(page));
+  },
+  productDetailPage: async ({ page }, use) => {
+    await use(new ProductDetailPage(page));
+  },
+  cartPage: async ({ page }, use) => {
+    await use(new CartPage(page));
   },
 });
 

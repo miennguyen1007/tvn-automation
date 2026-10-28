@@ -142,3 +142,4 @@ Add these secrets to your GitHub repository (`Settings → Secrets → Actions`)
 | `USER_PASSWORD` | Test account password |
 | `ADMIN_USERNAME` | Admin account email |
 | `ADMIN_PASSWORD` | Admin account password |
+

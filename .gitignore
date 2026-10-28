@@ -7,3 +7,4 @@ allure-report/
 playwright/.cache/
 dist/
 *.log
+

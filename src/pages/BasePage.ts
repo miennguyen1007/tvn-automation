@@ -109,3 +109,4 @@ export abstract class BasePage {
     await expect(locator).toBeHidden();
   }
 }
+

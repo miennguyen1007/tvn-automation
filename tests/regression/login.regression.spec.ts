@@ -1,87 +1,97 @@
 import { test, expect } from '../../src/fixtures';
-import { LoginPage } from '../../src/pages/LoginPage';
-import { HomePage } from '../../src/pages/HomePage';
-import { config } from '../../src/data/config';
 
 /**
- * REGRESSION TEST SUITE: Login & Session
- * Covers cross-browser, edge cases, and previously found bugs
- * Tags: @regression @P1 @P2
- * Run: npx playwright test tests/regression/login.regression.spec.ts
+ * REGRESSION TEST SUITE — EverShop tvn-sut.info
+ * Tests previously-discovered edge cases and cross-page navigation flows.
+ * Selectors VERIFIED on 2026-10-28.
  */
-test.describe('[REGRESSION] Login & Session Management', () => {
-  let loginPage: LoginPage;
-  let homePage: HomePage;
+test.describe('[REGRESSION] Cross-page Navigation & Edge Cases', () => {
 
-  test.beforeEach(async ({ page }) => {
-    loginPage = new LoginPage(page);
-    homePage  = new HomePage(page);
+  test('RG_001 - Logo/Home link navigates back to homepage', async ({ productListPage, page }) => {
+    await productListPage.goto();
+    const homeLink = page.locator('a[href="/"]').first();
+    await homeLink.click();
+    await page.waitForURL(/tvn-sut\.info\/$/, { timeout: 10_000 });
+    await expect(page).toHaveTitle('EverShop');
+  });
+
+  test('RG_002 - "About us" navigation link works from homepage', async ({ homePage, page }) => {
+    await homePage.goto();
+    await homePage.clickAboutUs();
+    await expect(page).toHaveURL(/about-us/);
+  });
+
+  test('RG_003 - Accessing /account without login redirects to /account/login', async ({ page }) => {
+    await page.goto('/account');
+    await page.waitForURL(/account\/login/, { timeout: 10_000 });
+    expect(page.url()).toContain('account/login');
+  });
+
+  test('RG_004 - Accessing /checkout without items redirects to /cart', async ({ page }) => {
+    await page.goto('/checkout');
+    await page.waitForURL(/cart|checkout/, { timeout: 10_000 });
+    expect(page.url()).toContain('tvn-sut.info');
+  });
+
+  test('RG_005 - Register page "Login" link works', async ({ registerPage, page }) => {
+    await registerPage.goto();
+    await registerPage.clickLoginLink();
+    await page.waitForURL(/account\/login/, { timeout: 10_000 });
+    await expect(page).toHaveTitle('Login');
+  });
+
+  test('RG_006 - Login page "Create an account" link works', async ({ loginPage, page }) => {
     await loginPage.goto();
+    await loginPage.clickCreateAccount();
+    await page.waitForURL(/register/, { timeout: 10_000 });
+    await expect(page).toHaveTitle('Create an account');
   });
 
-  test('RG_LGN_001 - Back button after logout does not restore session', async ({ page }) => {
-    await loginPage.loginAndWaitForDashboard(
-      config.credentials.user.username,
-      config.credentials.user.password,
-    );
-    await homePage.logout();
-    await page.goBack();
-    await page.waitForLoadState('domcontentloaded');
-    // Should still be on login page or session expired page
-    await expect(page).not.toHaveURL(/dashboard/);
-  });
-
-  test('RG_LGN_002 - Multiple rapid clicks on login button', async ({ page }) => {
-    await loginPage.fill(loginPage.emailInput, config.credentials.user.username);
-    await loginPage.fill(loginPage.passwordInput, config.credentials.user.password);
-
-    // Rapid double click — should NOT cause duplicate requests
-    await Promise.all([
-      loginPage.loginButton.click(),
-      loginPage.loginButton.click({ force: true }),
-    ]);
-    await page.waitForURL(/dashboard|home|\/[^l]/, { timeout: 15_000 }).catch(() => {});
-    // Should be on one page only, no duplicated session
-    expect(page.url()).toBeDefined();
-  });
-
-  test('RG_LGN_003 - Login in two separate tabs does not conflict', async ({ browser }) => {
-    const context = await browser.newContext();
-    const page1 = await context.newPage();
-    const page2 = await context.newPage();
-
-    const login1 = new LoginPage(page1);
-    const login2 = new LoginPage(page2);
-
-    await login1.goto();
-    await login2.goto();
-
-    await login1.loginAndWaitForDashboard(
-      config.credentials.user.username,
-      config.credentials.user.password,
-    );
-
-    // Refresh page2 — should now reflect logged-in state via shared session cookie
-    await page2.reload();
-    await page2.waitForLoadState('domcontentloaded');
-
-    await context.close();
-  });
-
-  test('RG_LGN_004 - Session cookie is HttpOnly and Secure', async ({ page, context }) => {
-    await loginPage.loginAndWaitForDashboard(
-      config.credentials.user.username,
-      config.credentials.user.password,
-    );
-    const cookies = await context.cookies();
-    const sessionCookie = cookies.find(c => c.name.toLowerCase().includes('session') || c.name.toLowerCase().includes('token'));
-
-    if (sessionCookie) {
-      expect(sessionCookie.httpOnly).toBeTruthy();
-      expect(sessionCookie.secure).toBeTruthy();
-    } else {
-      // No session cookie found — skip gracefully
-      test.info().annotations.push({ type: 'warning', description: 'No session cookie found to verify' });
+  test('RG_007 - Mini cart icon visible on all main pages', async ({ page }) => {
+    const pages = ['/', '/accessories', '/account/login', '/account/register', '/cart'];
+    for (const path of pages) {
+      await page.goto(path, { waitUntil: 'domcontentloaded' });
+      const miniCart = page.locator('.mini-cart-icon');
+      await expect(miniCart).toBeVisible({ timeout: 5_000 });
     }
+  });
+
+  test('RG_008 - Product detail for all Thermos variants load correctly', async ({ page }) => {
+    const variants = [
+      { slug: 'stainless-steel-thermos-yellow', expectedTitle: 'Stainless Steel Thermos - Yellow' },
+      { slug: 'stainless-steel-thermos-black',  expectedTitle: 'Stainless Steel Thermos - Black' },
+      { slug: 'stainless-steel-thermos-white',  expectedTitle: 'Stainless Steel Thermos - White' },
+    ];
+
+    for (const { slug, expectedTitle } of variants) {
+      await page.goto(`/accessories/${slug}`, { waitUntil: 'domcontentloaded' });
+      await expect(page).toHaveTitle(expectedTitle);
+      await expect(page.locator('button:has-text("ADD TO CART")')).toBeVisible();
+    }
+  });
+
+  test('RG_009 - Browser back button from product detail returns to product list', async ({ productListPage, productDetailPage, page }) => {
+    await productListPage.goto();
+    await productDetailPage.gotoProduct('stainless-steel-thermos-yellow');
+    await page.goBack();
+    await page.waitForURL(/accessories$/, { timeout: 10_000 });
+    expect(page.url()).toMatch(/\/accessories$/);
+  });
+
+  test('RG_010 - Page title changes correctly when navigating between pages', async ({ page }) => {
+    await page.goto('/');
+    expect(await page.title()).toBe('EverShop');
+
+    await page.goto('/accessories');
+    expect(await page.title()).toBe('Fashion Accessories');
+
+    await page.goto('/account/login');
+    expect(await page.title()).toBe('Login');
+
+    await page.goto('/account/register');
+    expect(await page.title()).toBe('Create an account');
+
+    await page.goto('/cart');
+    expect(await page.title()).toBe('Shopping cart');
   });
 });

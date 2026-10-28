@@ -32,3 +32,4 @@ setup('Authenticate as standard user', async ({ page }) => {
   // Save session to disk
   await page.context().storageState({ path: authFile });
 });
+
